@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.miaomaokao.shiro.shiro01.dao.UserDao">
+    <select id="findByName" resultType="cn.miaomaokao.shiro.shiro01.entity.UserEntity"
+    parameterType="string">
+        SELECT
+            user_name,
+            PASSWORD,
+            create_time,
+            update_time,
+            del_flag
+        FROM
+            `user`
+        WHERE
+            user_name = #{userName}
+    </select>
+</mapper>

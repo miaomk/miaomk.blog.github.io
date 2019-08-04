@@ -1,0 +1,23 @@
+server:
+  port: 80
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    username: root
+    data-password:
+    url: jdbc:mysql://127.0.0.1:3306/user?characterEncoding=UTF-8
+    type: com.alibaba.druid.pool.DruidDataSource
+  thymeleaf:
+    mode: LEGACYHTML5
+    encoding: utf-8
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+  application:
+    name: shiroDemo
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+
+
