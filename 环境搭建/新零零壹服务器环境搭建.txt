@@ -1,0 +1,80 @@
+零零壹服务器环境搭建文档
+1、装JDK，把JDK压缩包直接放在root路径下即可。有以下步骤跟命令
+1、  tar -xzvf  jdk-7u76-linux-x64.tar.gz 解压
+2、vi /etc/profile  编辑配置文件
+3、  （在export PATH USER LOGNAME MAIL HOSTNAME HISTSIZE HISTCONTROL之后加上这下面5句）
+# set java environment
+export JAVA_HOME=/root/jdk1.7.0_76
+export JRE_HOME=/root/jdk1.7.0_76/jre
+export CLASSPATH=.:$JAVA_HOME/lib:$JRE_HOME/lib
+export PATH=$JAVA_HOME/bin:$JRE_HOME/bin:$PATH
+
+9、chmod +x /etc/profile
+10、source /etc/profile
+11、  java -version   测试安装结果
+
+
+2、安装数据库
+1、把三个文件直接传输到root文件夹下面即可
+2、  yum -y remove mysql-libs-5.1*   卸载原来5.1的版本
+3、  rpm -ivh MySQL-server-5.6.21-1.rhel5.x86_64.rpm  
+4、  yum install -y libaio 
+5、  rpm -ivh MySQL-server-5.6.21-1.rhel5.x86_64.rpm 
+6、  rpm -ivh MySQL-client-5.6.21-1.rhel5.x86_64.rpm
+7、  rpm -ivh MySQL-devel-5.6.21-1.rhel5.x86_64.rpm
+8、  cp /usr/share/mysql/my-default.cnf/etc/my.cnf 
+9、  /usr/bin/mysql_install_db
+10、  service mysql start
+11、  more /root/.mysql_secret
+12、  mysql -uroot -prsHLJaMecjz2k
+VQH
+
+13、  SET PASSWORD = PASSWORD('yikuaihuan');
+14、  use mysql;
+15、  update user set host = '%'  where user ='root';
+16、  flush privileges;
+17、  exit
+18、  vi /etc/my.cnf
+19、  lower_case_table_names=1  character-set-server=utf8  server-id=1 log-bin=/var/lib/mysql/mysql-bin
+20、  service mysql restart  
+
+
+3、安装Apache
+1、   yum install httpd -y
+2、   chkconfig httpd on
+3、 service httpd start
+
+
+4、 安装VSFTP
+1、   yum install vsftpd
+2、   chkconfig vsftpd on
+3、   service vsftpd start
+4、   useradd -d /var/www/html/image -g ftp -s /sbin/nologin yikuaihuan 
+5、   passwd yikuaihuan
+6、  service vsftpd restart
+7、 chmod -R  777  /var/www/html
+
+
+5、 安装redis 
+1、 cd /opt/redis
+1、   tar -xzvf  redis-3.2.8.tar.gz
+2、   cd  /opt/redis/redis-3.2.8
+3、   make
+4、   cd src
+5、   make install
+6、   cd ..
+7、   vi redis.conf
+8、   daemonize no 改为daemonize yes
+9、   redis-server /opt/redis/redis-3.2.8/redis.conf
+
+6，tomcat
+
+tar -zxvf apache-tomcat-6.0.48.tar.gz
+修改端口：
+/sbin/iptables -I INPUT -p tcp --dport 8080 -j ACCEPT  开放端口
+
+然后我们可以通过命令查看当前端口的监听是否已经打开：
+netstat -ano | grep 8080
+然后我们就可以在浏览器中输入地址查看是够安装成功。
+地址格式：http://你的ip地址:8080
+linux中查看ip地址的方法为ifconfig
