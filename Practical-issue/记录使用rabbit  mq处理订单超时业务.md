@@ -1,15 +1,13 @@
 #### 记录使用rabbit  mq处理订单超时业务
->前言：这几天在收尾项目，发现对订单超时的业务做的不够细致，我们选择的是最为简单的定时任务来跑缓存中的订单，并筛选出超时的订单进行数据库更新操作，但是这样太消耗服务器的性能了，所以思考是否有别的解决方案
+>前言：这几天在收尾项目，发现对订单超时的业务做的不够细致(下单15分钟后未付款则订单失效)，我们选择的是最为简单的定时任务来跑缓存中的订单，并筛选出超时的订单进行数据库更新操作，但是这样太消耗服务器的性能了，所以思考是否有别的解决方案
 
 方案当然是有的，就我个人而言，就知道三种方案
 
  1. 就是我们现在所使用的方法，将订单存在redis缓存中，再模糊查询出来未付款的订单id列表，将id列表进行筛选，将筛选好的id列表进行数据库批量更新，
- 2.  也是将订单id存在redis缓存中，不同的是，存入redis的同时设置过期时间，再开启redis过期回调功能，参考链接：[https://www.cnblogs.com/NJM-F/p/10442198.html](https://www.cnblogs.com/NJM-F/p/10442198.html)，**但是问题是**![在这里插入图片描述](https://img-blog.csdnimg.cn/20200401163357239.png)
+ 2.  也是将订单id存在redis缓存中，不同的是，存入redis的同时设置过期时间，再开启redis过期回调功能，参考链接：[https://www.cnblogs.com/NJM-F/p/10442198.html](https://www.cnblogs.com/NJM-F/p/10442198.html)，实际操作文章：[https://blog.csdn.net/weixin_43864927/article/details/105261967*](https://blog.csdn.net/weixin_43864927/article/details/105261967) **但是问题是：**![在这里插入图片描述](https://img-blog.csdnimg.cn/20200401163357239.png)
 3. 使用mq来消费，mq设置消息过期时间，消息过期后，将订单消息发送到队列中，程序监听该队列，进行数据库操作
 - 综上所述，第三种应该是最适合我们的方法了，接下来就是具体操作了
-
 ---
-
 ##### 1.加入依赖
 ```java
 
@@ -82,7 +80,6 @@ public enum QueueEnum {
 }
 
 ```
-
 ##### 4.增加RabbitMqConfig配置类
 ```java 
 
@@ -173,7 +170,6 @@ public class RabbitMqConfig {
 - demo.order.direct.ttl（订单延迟消息队列所绑定的交换机）:绑定的队列为demo.order.cancel.ttl，一旦有消息以demo.order.cancel.ttl为路由键发送过来，会转发到此队列，并在此队列保存一定时间，等到超时后会自动将消息发送到demo.order.cancel（取消订单消息消费队列）。
 
 ##### 5.添加延迟消息的发送者CancelOrderSender（用于向订单延迟消息队列（demo.order.cancel.ttl）里发送消息）
-
 ```java
 
 package com.xx.xx.xx.component;
@@ -223,7 +219,7 @@ public class CancelOrderSender {
 package com.xx.xx.xx.component;
 
 
-import com.xx.xx.main.service.OmsPortalOrderService;
+import com.xx.xx.main.service.DemoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -241,20 +237,24 @@ import javax.annotation.Resource;
 public class CancelOrderReceiver {
 
     @Resource
-    private OmsPortalOrderService portalOrderService;
+    private DemoService demoService;
 
     @RabbitHandler
     public void handle(String orderId){
+	try {
 
-        log.info("receive delay message orderId:{}",orderId);
-        portalOrderService.cancelOrder(orderId);
+            demoService.cancelOverTimeOrder(orderId);
+        } catch (BusinessException e) {
+
+            log.info("receive delay message orderId:{},Exception:{}", orderId, e);
+        }
     }
 }
 ```
 ##### 7.在具体业务逻辑中发送消息
 ```java
 
-package com.xx.xx.main.service;
+package com.xx.xx.main.DemoService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -264,7 +264,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-public class TransactionService implements OrderService{
+public class DemoServiceImpl implements DemoService{
 	@Override
     public CommonResult generateOrder(OrderParam orderParam) {
         //todo 执行一系类下单操作
@@ -275,7 +275,7 @@ public class TransactionService implements OrderService{
     }
 
     @Override
-    public void cancelOrder(String orderId) {
+    public void cancelOverTimeOrder(String orderId) {
         //todo 执行一系类取消订单操作
         LOGGER.info("process cancelOrder orderId:{}",orderId);
     }
